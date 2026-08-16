@@ -106,7 +106,7 @@
             align-items: center;
             justify-content: center;
             text-align: center;
-            padding: 140px 20px 80px;
+            padding: 120px 20px 30px;
             position: relative;
         }
 
@@ -201,9 +201,9 @@
             transform: translateY(-3px);
         }
 
-        /* Секция */
+        /* Секции */
         section {
-            padding: 100px 7%;
+            padding: 60px 7%;
         }
 
         .section-title {
@@ -296,6 +296,13 @@
             margin-bottom: 30px;
         }
 
+        .download-buttons {
+            display: flex;
+            justify-content: center;
+            gap: 14px;
+            flex-wrap: wrap;
+        }
+
         /* Footer */
         footer {
             padding: 35px 7%;
@@ -386,6 +393,7 @@
             </p>
 
             <div class="buttons">
+
                 <a href="#download" class="btn btn-primary">
                     Скачать
                 </a>
@@ -393,6 +401,7 @@
                 <a href="#about" class="btn btn-secondary">
                     Узнать больше
                 </a>
+
             </div>
 
         </div>
@@ -411,6 +420,7 @@
         <div class="cards">
 
             <div class="card">
+
                 <div class="card-icon">⚡</div>
 
                 <h3>Быстро</h3>
@@ -419,9 +429,12 @@
                     Минималистичный интерфейс и быстрый доступ
                     ко всему необходимому.
                 </p>
+
             </div>
 
+
             <div class="card">
+
                 <div class="card-icon">◆</div>
 
                 <h3>Стильно</h3>
@@ -430,9 +443,12 @@
                     Современный дизайн LHS с акцентом
                     на простоту и удобство.
                 </p>
+
             </div>
 
+
             <div class="card">
+
                 <div class="card-icon">✓</div>
 
                 <h3>Удобно</h3>
@@ -441,6 +457,7 @@
                     Никаких лишних действий — нужные файлы
                     доступны в пару кликов.
                 </p>
+
             </div>
 
         </div>
@@ -460,12 +477,23 @@
                 и присоединяйтесь к проекту.
             </p>
 
-            <!-- Файл должен находиться рядом с index.html -->
-            <a href="./LHS.Pack.1.20.zip"
-               class="btn btn-primary"
-               download>
-                ↓ &nbsp; Скачать LHS
-            </a>
+            <div class="download-buttons">
+
+                <!-- LHS Pack -->
+                <a href="./LHS.Pack.1.20.zip"
+                   class="btn btn-primary"
+                   download>
+                    ↓ &nbsp; Скачать LHS
+                </a>
+
+                <!-- Моды -->
+                <a href="./LHS.MODS.1.20.zip"
+                   class="btn btn-secondary"
+                   download>
+                    ⚙ &nbsp; Скачать моды
+                </a>
+
+            </div>
 
         </div>
 
@@ -475,6 +503,7 @@
 
 
 <footer>
+
     <div>
         © 2026 <strong>LHS</strong>
     </div>
@@ -482,6 +511,7 @@
     <div>
         Last Human Stronghold
     </div>
+
 </footer>
 
 </body>
