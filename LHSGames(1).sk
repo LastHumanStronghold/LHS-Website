@@ -1,0 +1,2978 @@
+options:
+    ready-time: 15
+    max-players: 5
+    world: world
+
+    game-return-x: -182.477
+    game-return-y: 16
+    game-return-z: 167.500
+
+    base-zombies: 1
+    zombies-increment: 2
+    max-waves: 100
+
+    zombie-base-health: 10
+    zombie-health-per-wave: 0.5
+    zombie-health-per-10-waves: 1
+
+    miniboss-health: 150
+    miniboss-health-per-wave: 10
+
+    final-boss-health: 600
+
+    pvp-permission: LHS.pvp
+    inventory-permission: inventory
+
+
+# ============================================================
+#                         ON LOAD
+# ============================================================
+
+on load:
+    send "&8&m----------------------------------------" to console
+    send "&a[LHS] &f✓ LHSGames успешно перезагружен!" to console
+    send "&8&m----------------------------------------" to console
+
+    loop all players:
+        if loop-player is op:
+            send "&8[&aLHS&8] &a✓ &fLHSGames успешно перезагружен!" to loop-player
+
+
+# ============================================================
+#                     ОБЩИЕ ФУНКЦИИ
+# ============================================================
+
+function gameWorld() :: world:
+    return world("{@world}")
+
+
+function returnLocation() :: location:
+    set {_loc} to location at {@game-return-x}, {@game-return-y}, {@game-return-z} in world("{@world}")
+    return {_loc}
+
+
+function zombieMessage(message: text):
+    loop all players:
+        if {zombie.player::%uuid of loop-player%} is set:
+            send {_message} to loop-player
+
+
+function zombieActionBar(message: text):
+    loop all players:
+        if {zombie.player::%uuid of loop-player%} is set:
+            send action bar {_message} to loop-player
+
+
+function zombiePlayers() :: number:
+    set {_amount} to 0
+
+    loop all players:
+        if {zombie.player::%uuid of loop-player%} is set:
+            add 1 to {_amount}
+
+    return {_amount}
+
+
+function aliveZombiePlayers() :: number:
+    set {_amount} to 0
+
+    loop all players:
+        if {zombie.player::%uuid of loop-player%} is set:
+            if {zombie.dead::%uuid of loop-player%} is not set:
+                add 1 to {_amount}
+
+    return {_amount}
+
+
+function majorityNeeded() :: number:
+    set {_total} to zombiePlayers()
+
+    if {_total} <= 1:
+        return 1
+
+    set {_needed} to floor({_total} / 2)
+    add 1 to {_needed}
+
+    return {_needed}
+
+
+# ============================================================
+#                    УБИЙСТВО ВСЕХ ЗОМБИ
+# ============================================================
+
+function killAllZombieMobs():
+
+    set {_killed} to 0
+
+    loop all zombies:
+
+        if {zombie.%uuid of loop-entity%} is set:
+
+            delete {zombie.%uuid of loop-entity%}
+            delete {zombie.normal.%uuid of loop-entity%}
+            delete {zombie.miniboss.%uuid of loop-entity%}
+            delete {zombie.finalboss.%uuid of loop-entity%}
+
+            kill loop-entity
+
+            add 1 to {_killed}
+
+    set {alive_zombies} to 0
+
+    zombieMessage("")
+    zombieMessage("&c&lВСЕ ЗОМБИ УНИЧТОЖЕНЫ!")
+    zombieMessage("&7Уничтожено: &f%{_killed}%")
+    zombieMessage("")
+
+
+# ============================================================
+#                         ГЛАВНОЕ МЕНЮ
+# ============================================================
+
+command /menu:
+    permission: LHS.menu
+    permission message: &cУ вас нет прав.
+    trigger:
+
+        set {_inv} to chest inventory with 4 rows named "&8☠ &a&lLHS &8| &fИгровое меню"
+
+
+        # ====================================================
+        # РАМКА
+        # ====================================================
+
+        loop 0 and 1 and 2 and 3 and 4 and 5 and 6 and 7 and 8:
+            set slot loop-value of {_inv} to black stained glass pane named " "
+
+        loop 27 and 28 and 29 and 30 and 31 and 32 and 33 and 34 and 35:
+            set slot loop-value of {_inv} to black stained glass pane named " "
+
+        set slot 9 of {_inv} to black stained glass pane named " "
+        set slot 18 of {_inv} to black stained glass pane named " "
+
+        set slot 17 of {_inv} to black stained glass pane named " "
+        set slot 26 of {_inv} to black stained glass pane named " "
+
+
+        # ====================================================
+        # ЗАГОЛОВОК
+        # ====================================================
+
+        set {_head} to player head named "&a&l☠ LAST HUMAN STRONGHOLD"
+
+        clear {_lore::*}
+
+        add "&7Игровое меню LHS" to {_lore::*}
+        add "" to {_lore::*}
+        add "&8Выберите нужный игровой режим" to {_lore::*}
+
+        set lore of {_head} to {_lore::*}
+
+        set slot 4 of {_inv} to {_head}
+
+
+        # ====================================================
+        # DBD
+        # ====================================================
+
+        set {_item} to player head named "&a&l☠ DBD"
+
+        clear {_lore::*}
+
+        add "&7Игровой режим Dead by Daylight" to {_lore::*}
+        add "" to {_lore::*}
+        add "&a● &7Игроки готовы: &f%size of {dbd.ready::*}%&7/&f{@max-players}" to {_lore::*}
+        add "" to {_lore::*}
+        add "&e▶ Нажмите, чтобы присоединиться" to {_lore::*}
+
+        set lore of {_item} to {_lore::*}
+
+        set slot 12 of {_inv} to {_item}
+
+
+        # ====================================================
+        # ZOMBIEVOLN
+        # ====================================================
+
+        set {_item} to zombie head named "&4&l☠ ZOMBIEVOLN"
+
+        clear {_lore::*}
+
+        add "&7Выживание против волн зомби" to {_lore::*}
+        add "" to {_lore::*}
+
+        if {wave} is set:
+
+            add "&c● &7Игра уже идёт" to {_lore::*}
+            add "&7Текущая волна: &e%{wave}%" to {_lore::*}
+
+        else:
+
+            add "&a● &7Игра доступна" to {_lore::*}
+            add "&7Готовы: &f%size of {zombie.ready::*}%&7/&f{@max-players}" to {_lore::*}
+
+        add "" to {_lore::*}
+        add "&e▶ Нажмите, чтобы присоединиться" to {_lore::*}
+
+        set lore of {_item} to {_lore::*}
+
+        set slot 14 of {_inv} to {_item}
+
+
+        # ====================================================
+        # BUNKER
+        # ====================================================
+
+        set {_item} to player head named "&6&l☢ BUNKER"
+
+        clear {_lore::*}
+
+        add "&7Защищённый объект LHS" to {_lore::*}
+        add "" to {_lore::*}
+        add "&e⚠ &7Игровой режим находится" to {_lore::*}
+        add "&7в разработке." to {_lore::*}
+        add "" to {_lore::*}
+        add "&8▶ Скоро будет доступно" to {_lore::*}
+
+        set lore of {_item} to {_lore::*}
+
+        set slot 16 of {_inv} to {_item}
+
+
+        # ====================================================
+        # ДЕКОР
+        # ====================================================
+
+        set slot 10 of {_inv} to gray stained glass pane named " "
+        set slot 11 of {_inv} to gray stained glass pane named " "
+
+        set slot 13 of {_inv} to lime stained glass pane named "&a&lLHS"
+
+        set slot 15 of {_inv} to gray stained glass pane named " "
+
+
+        # ====================================================
+        # ИНФОРМАЦИЯ
+        # ====================================================
+
+        set {_item} to book named "&b&lℹ ИНФОРМАЦИЯ"
+
+        clear {_lore::*}
+
+        add "&7Добро пожаловать в &aLHS&7!" to {_lore::*}
+        add "" to {_lore::*}
+        add "&7Выберите один из доступных" to {_lore::*}
+        add "&7игровых режимов выше." to {_lore::*}
+        add "" to {_lore::*}
+        add "&8Last Human Stronghold" to {_lore::*}
+
+        set lore of {_item} to {_lore::*}
+
+        set slot 22 of {_inv} to {_item}
+
+
+        # ====================================================
+        # НИЖНИЙ ДЕКОР
+        # ====================================================
+
+        set slot 23 of {_inv} to black stained glass pane named " "
+        set slot 24 of {_inv} to black stained glass pane named " "
+        set slot 25 of {_inv} to black stained glass pane named " "
+
+
+        open {_inv} to player
+
+
+# ============================================================
+#                    КОМАНДА ZOMBIE
+# ============================================================
+
+command /zombie [<text>]:
+    trigger:
+
+        if arg-1 is not "menu":
+            send ""
+            send "&8&m━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
+            send "&4&l☠ ZOMBIEVOLN"
+            send ""
+            send "&7Режим доступен только администрации."
+            send ""
+            send "&8&m━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
+            stop
+
+        if player does not have permission "LHS.menu":
+            send "&c&l✘ &cУ вас нет прав для открытия этого меню."
+            stop
+
+        openZombieMenu(player)
+
+
+# ============================================================
+#                    МЕНЮ ZOMBIEVOLN
+# ============================================================
+
+function openZombieMenu(p: player):
+
+    set {_inv} to chest inventory with 4 rows named "&8☠ &4&lZOMBIEVOLN &8☠"
+
+
+    # ========================================================
+    # РАМКА
+    # ========================================================
+
+    loop 0 and 1 and 2 and 3 and 4 and 5 and 6 and 7 and 8:
+        set slot loop-value of {_inv} to black stained glass pane named " "
+
+    loop 27 and 28 and 29 and 30 and 31 and 32 and 33 and 34 and 35:
+        set slot loop-value of {_inv} to black stained glass pane named " "
+
+    loop 9 and 18:
+        set slot loop-value of {_inv} to black stained glass pane named " "
+
+    loop 17 and 26:
+        set slot loop-value of {_inv} to black stained glass pane named " "
+
+
+    # ========================================================
+    # ЗАГОЛОВОК
+    # ========================================================
+
+    set {_title} to zombie head named "&4&l☠ ZOMBIEVOLN"
+
+    clear {_lore::*}
+
+    add "&7Административное управление режимом" to {_lore::*}
+    add "" to {_lore::*}
+    add "&c⚠ Только для администрации" to {_lore::*}
+
+    set lore of {_title} to {_lore::*}
+
+    set slot 4 of {_inv} to {_title}
+
+
+    # ========================================================
+    # СТАТУС
+    # ========================================================
+
+    if {wave} is set:
+
+        clear {_statusLore::*}
+
+        add "&7Статус: &a&lИГРА ИДЁТ" to {_statusLore::*}
+        add "&7Текущая волна: &e&l%{wave}%" to {_statusLore::*}
+        add "&7Живых зомби: &c%{alive_zombies}%" to {_statusLore::*}
+        add "&7Игроков: &f%zombiePlayers()%" to {_statusLore::*}
+        add "" to {_statusLore::*}
+        add "&cНажмите для остановки игры." to {_statusLore::*}
+
+        set {_item} to redstone block named "&c&l☠ ОСТАНОВИТЬ ИГРУ"
+
+        set lore of {_item} to {_statusLore::*}
+
+    else:
+
+        clear {_statusLore::*}
+
+        add "&7Статус: &c&lНЕ ЗАПУЩЕНА" to {_statusLore::*}
+        add "" to {_statusLore::*}
+        add "&7Выберите волну ниже." to {_statusLore::*}
+        add "&7или запустите игру через &e/startzombie" to {_statusLore::*}
+
+        set {_item} to emerald block named "&a&l✔ ИГРА НЕ ЗАПУЩЕНА"
+
+        set lore of {_item} to {_statusLore::*}
+
+    set slot 10 of {_inv} to {_item}
+
+
+    # ========================================================
+    # УБИТЬ ВСЕХ
+    # ========================================================
+
+    clear {_lore::*}
+
+    add "&7Мгновенно уничтожает всех" to {_lore::*}
+    add "&7зомби текущей волны." to {_lore::*}
+    add "" to {_lore::*}
+    add "&c⚠ Волна будет считаться очищенной." to {_lore::*}
+
+    set {_item} to iron sword named "&4&l☠ УБИТЬ ВСЕХ ЗОМБИ"
+
+    set lore of {_item} to {_lore::*}
+
+    set slot 11 of {_inv} to {_item}
+
+
+    # ========================================================
+    # ВЫБОР ВОЛНЫ
+    # ========================================================
+
+    clear {_lore::*}
+
+    add "&7Запустить любую волну." to {_lore::*}
+    add "" to {_lore::*}
+    add "&e1 &7— &e100" to {_lore::*}
+    add "" to {_lore::*}
+    add "&e▶ Нажмите для ввода номера" to {_lore::*}
+
+    set {_item} to compass named "&6&l⚙ ВЫБРАТЬ ВОЛНУ"
+
+    set lore of {_item} to {_lore::*}
+
+    set slot 12 of {_inv} to {_item}
+
+
+    # ========================================================
+    # ВОЛНА 1
+    # ========================================================
+
+    set {_item} to zombie head named "&a&l☠ ВОЛНА 1"
+
+    clear {_lore::*}
+
+    add "&7Быстрый запуск первой волны." to {_lore::*}
+    add "" to {_lore::*}
+    add "&e▶ Нажмите для запуска" to {_lore::*}
+
+    set lore of {_item} to {_lore::*}
+
+    set slot 13 of {_inv} to {_item}
+
+
+    # ========================================================
+    # ВОЛНА 10
+    # ========================================================
+
+    set {_item} to zombie head named "&a&l☠ ВОЛНА 10"
+
+    clear {_lore::*}
+
+    add "&7Запуск 10-й волны." to {_lore::*}
+    add "&7Появится мини-босс." to {_lore::*}
+    add "" to {_lore::*}
+    add "&e▶ Нажмите для запуска" to {_lore::*}
+
+    set lore of {_item} to {_lore::*}
+
+    set slot 14 of {_inv} to {_item}
+
+
+    # ========================================================
+    # ВОЛНА 25
+    # ========================================================
+
+    set {_item} to zombie head named "&e&l☠ ВОЛНА 25"
+
+    clear {_lore::*}
+
+    add "&7Запуск 25-й волны." to {_lore::*}
+    add "" to {_lore::*}
+    add "&e▶ Нажмите для запуска" to {_lore::*}
+
+    set lore of {_item} to {_lore::*}
+
+    set slot 15 of {_inv} to {_item}
+
+
+    # ========================================================
+    # ВОЛНА 50
+    # ========================================================
+
+    set {_item} to zombie head named "&e&l☠ ВОЛНА 50"
+
+    clear {_lore::*}
+
+    add "&7Запуск 50-й волны." to {_lore::*}
+    add "" to {_lore::*}
+    add "&e▶ Нажмите для запуска" to {_lore::*}
+
+    set lore of {_item} to {_lore::*}
+
+    set slot 16 of {_inv} to {_item}
+
+
+    # ========================================================
+    # ВОЛНА 75
+    # ========================================================
+
+    set {_item} to zombie head named "&c&l☠ ВОЛНА 75"
+
+    clear {_lore::*}
+
+    add "&7Запуск 75-й волны." to {_lore::*}
+    add "" to {_lore::*}
+    add "&e▶ Нажмите для запуска" to {_lore::*}
+
+    set lore of {_item} to {_lore::*}
+
+    set slot 19 of {_inv} to {_item}
+
+
+    # ========================================================
+    # ФИНАЛ
+    # ========================================================
+
+    set {_lore::*} to "&4&l☠ ФИНАЛЬНАЯ ВОЛНА"
+
+    add "" to {_lore::*}
+
+    add "&7Финальный босс:" to {_lore::*}
+
+    add "&c%{@final-boss-health}% ❤" to {_lore::*}
+
+    add "" to {_lore::*}
+
+    add "&4⚠ КРАЙНИЙ БОЙ" to {_lore::*}
+
+    set {_item} to wither skeleton skull named "&4&l☠ ВОЛНА 100"
+
+    set lore of {_item} to {_lore::*}
+
+    set slot 20 of {_inv} to {_item}
+
+
+    # ========================================================
+    # ИНФОРМАЦИЯ
+    # ========================================================
+
+    clear {_info::*}
+
+    add "&7Максимум: &e100 волн" to {_info::*}
+    add "&7Каждая волна становится сложнее." to {_info::*}
+    add "" to {_info::*}
+    add "&c☠ &7Обычные зомби" to {_info::*}
+    add "&5☠ &7Мини-босс каждые 10 волн" to {_info::*}
+    add "&4☠ &7Финальный босс на 100-й" to {_info::*}
+
+    set {_item} to book named "&b&lℹ ИНФОРМАЦИЯ"
+
+    set lore of {_item} to {_info::*}
+
+    set slot 21 of {_inv} to {_item}
+
+
+    # ========================================================
+    # ДЕКОР
+    # ========================================================
+
+    set slot 22 of {_inv} to red stained glass pane named "&c☠"
+    set slot 23 of {_inv} to black stained glass pane named " "
+    set slot 24 of {_inv} to red stained glass pane named "&c☠"
+
+
+    open {_inv} to {_p}
+
+
+# ============================================================
+#                      КЛИКИ МЕНЮ
+# ============================================================
+
+on inventory click:
+
+    # ========================================================
+    # ГЛАВНОЕ МЕНЮ
+    # ========================================================
+
+    if name of event-inventory is "&8☠ &a&lLHS &8| &fИгровое меню":
+
+        cancel event
+
+
+        # ====================================================
+        # DBD
+        # ====================================================
+
+        if clicked slot is 12:
+
+            if {dbd.clickcooldown::%uuid of player%} is set:
+                stop
+
+            set {dbd.clickcooldown::%uuid of player%} to true
+
+            wait 2 ticks
+
+            delete {dbd.clickcooldown::%uuid of player%}
+
+            close player's inventory
+
+            if {dbd.ready::%uuid of player%} is set:
+
+                send "&cВы уже готовы!"
+
+                stop
+
+            set {dbd.ready::%uuid of player%} to true
+
+            set {_ready} to size of {dbd.ready::*}
+
+            delete {_list::*}
+
+            loop all players:
+
+                if {dbd.ready::%uuid of loop-player%} is set:
+
+                    add name of loop-player to {_list::*}
+
+
+            loop all players:
+
+                if loop-player has permission "LHS.menu":
+
+                    send "&a➕ %player% присоединился! &7(DBD)" to loop-player
+                    send "&eГотово: &f%{_ready}%/{@max-players}" to loop-player
+                    send "&7Готовы: &f%{_list::*}%" to loop-player
+
+
+            if {_ready} >= {@max-players}:
+
+                delete {dbd.countdown}
+
+                execute console command "startgame"
+
+                delete {dbd.ready::*}
+
+                stop
+
+
+            if {dbd.countdown} is set:
+                stop
+
+
+            set {dbd.countdown} to true
+
+
+            loop {@ready-time} times:
+
+                wait 1 second
+
+                if {dbd.countdown} is not set:
+                    stop
+
+                if size of {dbd.ready::*} >= {@max-players}:
+                    stop
+
+                set {_time} to {@ready-time} - loop-number
+
+
+                if {_time} > 0:
+
+                    loop all players:
+
+                        if loop-player has permission "LHS.menu":
+
+                            send action bar "&eDBD начнётся через %{_time}% сек. &7| &aГотовы: %size of {dbd.ready::*}%/{@max-players}" to loop-player
+
+
+            if {dbd.countdown} is set:
+
+                execute console command "startgame"
+
+                delete {dbd.ready::*}
+                delete {dbd.countdown}
+
+
+        # ====================================================
+        # ZOMBIEVOLN
+        # ====================================================
+
+        else if clicked slot is 14:
+
+            if {zombie.clickcooldown::%uuid of player%} is set:
+                stop
+
+            set {zombie.clickcooldown::%uuid of player%} to true
+
+            wait 2 ticks
+
+            delete {zombie.clickcooldown::%uuid of player%}
+
+            close player's inventory
+
+
+            if {wave} is set:
+
+                send "&cZombieVoln уже запущена!"
+
+                stop
+
+
+            if {zombie.ready::%uuid of player%} is set:
+
+                send "&cВы уже готовы!"
+
+                stop
+
+
+            set {zombie.ready::%uuid of player%} to true
+
+            set {_ready} to size of {zombie.ready::*}
+
+            delete {_list::*}
+
+
+            loop all players:
+
+                if {zombie.ready::%uuid of loop-player%} is set:
+
+                    add name of loop-player to {_list::*}
+
+
+            loop all players:
+
+                if loop-player has permission "LHS.menu":
+
+                    send "&a➕ %player% присоединился! &7(ZOMBIEVOLN)" to loop-player
+                    send "&eГотово: &f%{_ready}%/{@max-players}" to loop-player
+                    send "&7Готовы: &f%{_list::*}%" to loop-player
+
+
+            if {_ready} >= {@max-players}:
+
+                delete {zombie.countdown}
+
+                execute console command "startzombie"
+
+                stop
+
+
+            if {zombie.countdown} is set:
+                stop
+
+
+            set {zombie.countdown} to true
+
+
+            loop {@ready-time} times:
+
+                wait 1 second
+
+                if {zombie.countdown} is not set:
+                    stop
+
+                if size of {zombie.ready::*} >= {@max-players}:
+                    stop
+
+                set {_time} to {@ready-time} - loop-number
+
+
+                if {_time} > 0:
+
+                    loop all players:
+
+                        if loop-player has permission "LHS.menu":
+
+                            send action bar "&eZOMBIEVOLN начнётся через %{_time}% сек. &7| &aГотовы: %size of {zombie.ready::*}%/{@max-players}" to loop-player
+
+
+            if {zombie.countdown} is set:
+
+                execute console command "startzombie"
+
+                delete {zombie.countdown}
+
+
+        # ====================================================
+        # BUNKER
+        # ====================================================
+
+        else if clicked slot is 16:
+
+            close player's inventory
+
+            send ""
+            send "&8&m━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
+            send "&6&l☢ BUNKER"
+            send ""
+            send "&7Этот игровой режим пока находится"
+            send "&7в разработке."
+            send ""
+            send "&eСледите за обновлениями LHS!"
+            send "&8&m━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
+
+            stop
+
+
+    # ========================================================
+    # ZOMBIE MENU
+    # ========================================================
+
+    if name of event-inventory is "&8☠ &4&lZOMBIEVOLN &8☠":
+
+        cancel event
+
+
+        if player does not have permission "LHS.menu":
+
+            close player's inventory
+
+            stop
+
+
+        # ====================================================
+        # ОСТАНОВКА
+        # ====================================================
+
+        if clicked slot is 10:
+
+            close player's inventory
+
+            if {wave} is set:
+
+                send "&cОстановка ZombieVoln..." to player
+
+                stopZombieGame()
+
+            else:
+
+                send "&cZombieVoln сейчас не запущена." to player
+
+            stop
+
+
+        # ====================================================
+        # УБИТЬ ВСЕХ
+        # ====================================================
+
+        if clicked slot is 11:
+
+            close player's inventory
+
+            if {wave} is not set:
+
+                send "&cZombieVoln сейчас не запущена." to player
+
+                stop
+
+
+            send "&cУничтожение всех зомби..." to player
+
+            killAllZombieMobs()
+
+
+            if {wave} >= {@max-waves}:
+
+                zombieMessage("&a&lПОБЕДА!")
+                zombieMessage("&aВсе 100 волн пройдены!")
+
+                wait 2 seconds
+
+                stopZombieGame()
+
+                stop
+
+
+            prepareNextWave()
+
+            stop
+
+
+        # ====================================================
+        # ВЫБОР ВОЛНЫ
+        # ====================================================
+
+        if clicked slot is 12:
+
+            close player's inventory
+
+            set {zombie.waveInput::%uuid of player%} to true
+
+            send ""
+            send "&8&m━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
+            send "&6&l⚙ ВЫБОР ВОЛНЫ"
+            send ""
+            send "&7Введите в чат номер волны:"
+            send "&e&l1 &7— &e&l100"
+            send ""
+            send "&8Введите &ccancel &8для отмены."
+            send "&8&m━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
+
+            stop
+
+
+        # ====================================================
+        # ВОЛНА 1
+        # ====================================================
+
+        if clicked slot is 13:
+
+            close player's inventory
+
+            forceZombieWave(1, player)
+
+            stop
+
+
+        # ====================================================
+        # ВОЛНА 10
+        # ====================================================
+
+        if clicked slot is 14:
+
+            close player's inventory
+
+            forceZombieWave(10, player)
+
+            stop
+
+
+        # ====================================================
+        # ВОЛНА 25
+        # ====================================================
+
+        if clicked slot is 15:
+
+            close player's inventory
+
+            forceZombieWave(25, player)
+
+            stop
+
+
+        # ====================================================
+        # ВОЛНА 50
+        # ====================================================
+
+        if clicked slot is 16:
+
+            close player's inventory
+
+            forceZombieWave(50, player)
+
+            stop
+
+
+        # ====================================================
+        # ВОЛНА 75
+        # ====================================================
+
+        if clicked slot is 19:
+
+            close player's inventory
+
+            forceZombieWave(75, player)
+
+            stop
+
+
+        # ====================================================
+        # ВОЛНА 100
+        # ====================================================
+
+        if clicked slot is 20:
+
+            close player's inventory
+
+            forceZombieWave(100, player)
+
+            stop
+
+
+# ============================================================
+#                      DRAG МЕНЮ
+# ============================================================
+
+on inventory drag:
+
+    if name of event-inventory is "&8☠ &a&lLHS &8| &fИгровое меню":
+
+        cancel event
+
+    if name of event-inventory is "&8☠ &4&lZOMBIEVOLN &8☠":
+
+        cancel event
+
+
+# ============================================================
+#                  ВВОД ВОЛНЫ ЧЕРЕЗ ЧАТ
+# ============================================================
+
+on chat:
+
+    if {zombie.waveInput::%uuid of player%} is not set:
+
+        stop
+
+
+    cancel event
+
+    set {_input} to message
+
+
+    if {_input} is "cancel":
+
+        delete {zombie.waveInput::%uuid of player%}
+
+        send "&c✘ Выбор волны отменён." to player
+
+        stop
+
+
+    set {_waveNumber} to {_input} parsed as integer
+
+
+    if {_waveNumber} is not set:
+
+        send "&c✘ Ошибка! &7Введите целое число от &e1 &7до &e100." to player
+
+        stop
+
+
+    if {_waveNumber} < 1:
+
+        send "&c✘ Минимальная волна: &e1" to player
+
+        stop
+
+
+    if {_waveNumber} > {@max-waves}:
+
+        send "&c✘ Максимальная волна: &e100" to player
+
+        stop
+
+
+    delete {zombie.waveInput::%uuid of player%}
+
+    send ""
+    send "&8&m━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
+    send "&a&lВОЛНА ВЫБРАНА"
+    send "&7Запускается волна: &e&l%{_waveNumber}%"
+    send "&8&m━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
+
+    wait 5 ticks
+
+    forceZombieWave({_waveNumber}, player)
+
+
+# ============================================================
+#              КЛИКАБЕЛЬНАЯ КНОПКА СЛЕДУЮЩЕЙ ВОЛНЫ
+# ============================================================
+
+function sendNextWaveButton(p: player):
+
+    send "" to {_p}
+
+    send "&8&m━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━" to {_p}
+    send "&a&lВолна %{wave}% зачищена!" to {_p}
+    send "&7Все зомби текущей волны уничтожены." to {_p}
+    send "&7Следующая волна: &e%{wave} + 1%" to {_p}
+    send "" to {_p}
+
+
+    # ========================================================
+    # НАСТОЯЩАЯ КЛИКАБЕЛЬНАЯ КНОПКА
+    # ========================================================
+
+    execute console command "tellraw %name of {_p}% [{\"text\":\"▶ НАЧАТЬ СЛЕДУЮЩУЮ ВОЛНУ\",\"color\":\"green\",\"bold\":true,\"clickEvent\":{\"action\":\"run_command\",\"value\":\"/nextwave\"},\"hoverEvent\":{\"action\":\"show_text\",\"contents\":{\"text\":\"Нажмите, чтобы начать следующую волну\",\"color\":\"yellow\"}}}]"
+
+
+    send "" to {_p}
+    send "&8&m━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━" to {_p}
+    send "" to {_p}
+
+
+# ============================================================
+#                    ПРИНУДИТЕЛЬНЫЙ ЗАПУСК
+# ============================================================
+
+function forceZombieWave(startwave: number, executor: player):
+
+    if {_startwave} < 1:
+
+        set {_startwave} to 1
+
+
+    if {_startwave} > {@max-waves}:
+
+        set {_startwave} to {@max-waves}
+
+
+    if {wave} is set:
+
+        send "&eПерезапуск ZombieVoln..." to {_executor}
+
+        killAllZombieMobs()
+
+        delete {wave}
+        delete {alive_zombies}
+
+        delete {zombie.nextwave}
+        delete {zombie.wavevote::*}
+
+
+    delete {_players::*}
+
+
+    loop all players:
+
+        if {zombie.player::%uuid of loop-player%} is set:
+
+            add loop-player to {_players::*}
+
+
+    # ========================================================
+    # НЕТ ИГРОКОВ = НЕТ ЗАПУСКА
+    # ========================================================
+
+    if size of {_players::*} < 1:
+
+        send "&c&l✘ НЕТ ИГРОКОВ!" to {_executor}
+        send "&7Нет игроков, участвующих в ZombieVoln." to {_executor}
+        send "&7Сначала игроки должны присоединиться через &e/menu" to {_executor}
+
+        stop
+
+
+    set {wave} to {_startwave}
+    set {alive_zombies} to 0
+
+
+    delete {zombie.playerSpawns::*}
+    delete {zombie.reviveSpawns::*}
+
+
+    # ========================================================
+    # ТОЧКИ ИГРОКОВ
+    # ========================================================
+
+    set {_loc} to location at -101.492, 16, 107.484 in world("{@world}")
+    add {_loc} to {zombie.playerSpawns::*}
+
+    set {_loc} to location at -99.504, 16, 107.404 in world("{@world}")
+    add {_loc} to {zombie.playerSpawns::*}
+
+    set {_loc} to location at -101.495, 16, 109.516 in world("{@world}")
+    add {_loc} to {zombie.playerSpawns::*}
+
+    set {_loc} to location at -103.511, 16, 107.476 in world("{@world}")
+    add {_loc} to {zombie.playerSpawns::*}
+
+    set {_loc} to location at -100.507, 16, 106.473 in world("{@world}")
+    add {_loc} to {zombie.playerSpawns::*}
+
+
+    loop {zombie.playerSpawns::*}:
+
+        add loop-value to {zombie.reviveSpawns::*}
+
+
+    # ========================================================
+    # ТЕЛЕПОРТ ИГРОКОВ
+    # ========================================================
+
+    loop {_players::*}:
+
+        set {_p} to loop-value
+
+        set {zombie.player::%uuid of {_p}%} to true
+
+        delete {zombie.dead::%uuid of {_p}%}
+
+
+        if size of {zombie.playerSpawns::*} > 0:
+
+            set {_spawn} to random element out of {zombie.playerSpawns::*}
+
+            teleport {_p} to {_spawn}
+
+            remove {_spawn} from {zombie.playerSpawns::*}
+
+
+        set health of {_p} to max health of {_p}
+        set food level of {_p} to 20
+        set gamemode of {_p} to adventure
+
+        clear {_p}'s inventory
+
+        give wooden sword to {_p}
+
+        send "&aИгра запущена!" to {_p}
+        send "&eСтартовая волна: &6%{wave}%" to {_p}
+
+
+    delete {zombie.ready::*}
+    delete {zombie.nextwave}
+    delete {zombie.wavevote::*}
+
+
+    send "&a✓ ZombieVoln запущена с волны &e%{wave}%&a!" to {_executor}
+
+
+    wait 1 second
+
+
+    if {wave} is set:
+
+        spawnZombieWave()
+
+
+# ============================================================
+#                           DBD
+# ============================================================
+
+command /startgame:
+    permission: LHS.menu
+    permission message: &cУ вас нет прав.
+    trigger:
+
+        delete {dbd.spawns::*}
+
+
+        set {_loc} to location at 171.491, 8, -160.523 in world("{@world}")
+
+        set yaw of {_loc} to 180
+
+        add {_loc} to {dbd.spawns::*}
+
+
+        set {_loc} to location at 173.485, 8, -161.517 in world("{@world}")
+
+        set yaw of {_loc} to 90
+
+        add {_loc} to {dbd.spawns::*}
+
+
+        set {_loc} to location at 172.498, 8, -162.528 in world("{@world}")
+
+        set yaw of {_loc} to 270
+
+        add {_loc} to {dbd.spawns::*}
+
+
+        set {_loc} to location at 173.482, 8, -159.543 in world("{@world}")
+
+        set yaw of {_loc} to 0
+
+        add {_loc} to {dbd.spawns::*}
+
+
+        set {_loc} to location at 168.483, 8, -158.560 in world("{@world}")
+
+        set yaw of {_loc} to 45
+
+        add {_loc} to {dbd.spawns::*}
+
+
+        loop all players:
+
+            if {dbd.ready::%uuid of loop-player%} is set:
+
+                if size of {dbd.spawns::*} <= 0:
+
+                    send "&cНедостаточно точек спавна!" to loop-player
+
+                    stop
+
+
+                set {_spawn} to random element out of {dbd.spawns::*}
+
+                teleport loop-player to {_spawn}
+
+                remove {_spawn} from {dbd.spawns::*}
+
+                send "&aВы были телепортированы на случайную точку." to loop-player
+
+
+# ============================================================
+#                     START ZOMBIE
+# ============================================================
+
+command /startzombie [<number>]:
+    permission: LHS.menu
+    permission message: &cУ вас нет прав.
+    trigger:
+
+
+        if {wave} is set:
+
+            send "&cИгра уже запущена!" to sender
+
+            stop
+
+
+        if size of {zombie.mobSpawns::*} <= 0:
+
+            send "&cНет точек спавна зомби!" to sender
+            send "&7Установите их через &f/setzombiespawn" to sender
+
+            stop
+
+
+        delete {_players::*}
+
+
+        loop all players:
+
+            if {zombie.ready::%uuid of loop-player%} is set:
+
+                add loop-player to {_players::*}
+
+
+        # ====================================================
+        # НЕТ ИГРОКОВ = НЕТ ЗАПУСКА
+        # ====================================================
+
+        if size of {_players::*} < 1:
+
+            send "&c&l✘ НЕТ ИГРОКОВ!" to sender
+            send "&7Нет игроков, готовых к ZombieVoln." to sender
+            send "&7Игра не была запущена." to sender
+
+            stop
+
+
+        if arg-1 is set:
+
+            set {_startwave} to arg-1
+
+            if {_startwave} < 1:
+
+                set {_startwave} to 1
+
+
+            if {_startwave} > {@max-waves}:
+
+                set {_startwave} to {@max-waves}
+
+        else:
+
+            set {_startwave} to 1
+
+
+        set {wave} to {_startwave}
+        set {alive_zombies} to 0
+
+
+        delete {zombie.playerSpawns::*}
+        delete {zombie.reviveSpawns::*}
+
+
+        set {_loc} to location at -101.492, 16, 107.484 in world("{@world}")
+        add {_loc} to {zombie.playerSpawns::*}
+
+        set {_loc} to location at -99.504, 16, 107.404 in world("{@world}")
+        add {_loc} to {zombie.playerSpawns::*}
+
+        set {_loc} to location at -101.495, 16, 109.516 in world("{@world}")
+        add {_loc} to {zombie.playerSpawns::*}
+
+        set {_loc} to location at -103.511, 16, 107.476 in world("{@world}")
+        add {_loc} to {zombie.playerSpawns::*}
+
+        set {_loc} to location at -100.507, 16, 106.473 in world("{@world}")
+        add {_loc} to {zombie.playerSpawns::*}
+
+
+        loop {zombie.playerSpawns::*}:
+
+            add loop-value to {zombie.reviveSpawns::*}
+
+
+        loop {_players::*}:
+
+            set {_p} to loop-value
+
+            set {zombie.player::%uuid of {_p}%} to true
+
+            delete {zombie.dead::%uuid of {_p}%}
+
+
+            if size of {zombie.playerSpawns::*} > 0:
+
+                set {_spawn} to random element out of {zombie.playerSpawns::*}
+
+                teleport {_p} to {_spawn}
+
+                remove {_spawn} from {zombie.playerSpawns::*}
+
+
+            set health of {_p} to max health of {_p}
+            set food level of {_p} to 20
+            set gamemode of {_p} to adventure
+
+            clear {_p}'s inventory
+
+            give wooden sword to {_p}
+
+            send "&aИгра началась!" to {_p}
+            send "&eСтартовая волна: &6%{wave}%" to {_p}
+
+
+        delete {zombie.ready::*}
+
+        startZombieCountdown()
+
+
+# ============================================================
+#                  ОБРАТНЫЙ ОТСЧЁТ
+# ============================================================
+
+function startZombieCountdown():
+
+    if {wave} is not set:
+
+        stop
+
+
+    zombieMessage("&cЗомби-апокалипсис начинается через 5 секунд!")
+
+    wait 1 second
+
+
+    if {wave} is not set:
+
+        stop
+
+
+    zombieMessage("&c4...")
+
+    wait 1 second
+
+
+    if {wave} is not set:
+
+        stop
+
+
+    zombieMessage("&c3...")
+
+    wait 1 second
+
+
+    if {wave} is not set:
+
+        stop
+
+
+    zombieMessage("&c2...")
+
+    wait 1 second
+
+
+    if {wave} is not set:
+
+        stop
+
+
+    zombieMessage("&c1...")
+
+    wait 1 second
+
+
+    if {wave} is not set:
+
+        stop
+
+
+    zombieMessage("&aВперёд!")
+
+    spawnZombieWave()
+
+
+# ============================================================
+#                     ТОЧКИ ЗОМБИ
+# ============================================================
+
+command /setzombiespawn:
+    permission: Dev
+    permission message: &cУ вас нет прав.
+    trigger:
+
+        add location of player to {zombie.mobSpawns::*}
+
+        send "&aТочка спавна зомби добавлена!"
+        send "&7Всего точек: &f%size of {zombie.mobSpawns::*}%"
+
+
+command /clearzombiespawns:
+    permission: Dev
+    permission message: &cУ вас нет прав.
+    trigger:
+
+        delete {zombie.mobSpawns::*}
+
+        send "&cВсе точки спавна зомби удалены!"
+
+
+command /stopzombies:
+    permission: Dev
+    permission message: &cУ вас нет прав.
+    trigger:
+
+        stopZombieGame()
+
+
+# ============================================================
+#                     SPAWN ВОЛНЫ
+# ============================================================
+
+function spawnZombieWave():
+
+    if {wave} is not set:
+
+        stop
+
+
+    if {wave} > {@max-waves}:
+
+        stopZombieGame()
+
+        stop
+
+
+    set {_waveIncrease} to ({wave} - 1) * {@zombie-health-per-wave}
+
+    set {_tenWaveCount} to floor(({wave} - 1) / 10)
+
+    set {_tenWaveIncrease} to {_tenWaveCount} * {@zombie-health-per-10-waves}
+
+    set {_zombieHP} to {@zombie-base-health} + {_waveIncrease} + {_tenWaveIncrease}
+
+
+    set {_amount} to {@base-zombies} + (({wave} - 1) * {@zombies-increment})
+
+    set {alive_zombies} to 0
+
+
+    if size of {zombie.mobSpawns::*} <= 0:
+
+        zombieMessage("&cНет точек спавна зомби!")
+
+        stopZombieGame()
+
+        stop
+
+
+    # ========================================================
+    # ОБЫЧНЫЕ ЗОМБИ
+    # ========================================================
+
+    loop {_amount} times:
+
+        set {_spawnLoc} to random element out of {zombie.mobSpawns::*}
+
+        spawn a zombie at {_spawnLoc}
+
+        set {_zombie} to last spawned entity
+
+        set max health of {_zombie} to {_zombieHP}
+
+        heal {_zombie}
+
+        set helmet of {_zombie} to leather helmet
+
+        set name of {_zombie} to "&7Зомби &c%round({_zombieHP})% ❤"
+
+        set {zombie.%uuid of {_zombie}%} to true
+
+        set {zombie.normal.%uuid of {_zombie}%} to true
+
+        add 1 to {alive_zombies}
+
+
+    # ========================================================
+    # МИНИ-БОСС
+    # ========================================================
+
+    if mod({wave}, 10) = 0:
+
+        if {wave} < {@max-waves}:
+
+            set {_spawnLoc} to random element out of {zombie.mobSpawns::*}
+
+            spawn a zombie at {_spawnLoc}
+
+            set {_boss} to last spawned entity
+
+            set {_miniHP} to {@miniboss-health} + ({wave} * {@miniboss-health-per-wave})
+
+            set max health of {_boss} to {_miniHP}
+
+            heal {_boss}
+
+            apply strength 2 to {_boss} for 9999 seconds
+            apply resistance 2 to {_boss} for 9999 seconds
+            apply speed 1 to {_boss} for 9999 seconds
+
+            set helmet of {_boss} to iron helmet
+
+            set name of {_boss} to "&5&lМИНИ-БОСС &d%round({_miniHP})% ❤"
+
+            set {zombie.%uuid of {_boss}%} to true
+
+            set {zombie.miniboss.%uuid of {_boss}%} to true
+
+            add 1 to {alive_zombies}
+
+
+            zombieMessage("")
+            zombieMessage("&5&lПоявился мини-босс!")
+            zombieMessage("&7Волна: &e%{wave}%")
+            zombieMessage("&7Здоровье: &c%{_miniHP}% ❤")
+            zombieMessage("")
+
+
+    # ========================================================
+    # ФИНАЛЬНЫЙ БОСС
+    # ========================================================
+
+    if {wave} = {@max-waves}:
+
+        set {_spawnLoc} to random element out of {zombie.mobSpawns::*}
+
+        spawn a zombie at {_spawnLoc}
+
+        set {_boss} to last spawned entity
+
+        set {_finalHP} to {@final-boss-health}
+
+        set max health of {_boss} to {_finalHP}
+
+        heal {_boss}
+
+        apply strength 5 to {_boss} for 9999 seconds
+        apply resistance 4 to {_boss} for 9999 seconds
+        apply speed 2 to {_boss} for 9999 seconds
+        apply fire resistance to {_boss} for 9999 seconds
+
+        set helmet of {_boss} to diamond helmet
+
+        set name of {_boss} to "&4&l☠ ФИНАЛЬНЫЙ БОСС &c%{_finalHP}% ❤"
+
+        set {zombie.%uuid of {_boss}%} to true
+
+        set {zombie.finalboss.%uuid of {_boss}%} to true
+
+        add 1 to {alive_zombies}
+
+
+        zombieMessage("")
+        zombieMessage("&4&lФИНАЛЬНЫЙ БОСС ПОЯВИЛСЯ!")
+        zombieMessage("&cЗдоровье: &4%{_finalHP}% ❤")
+        zombieMessage("&cУничтожьте его!")
+        zombieMessage("")
+
+
+    # ========================================================
+    # ИНФОРМАЦИЯ О ВОЛНЕ
+    # ========================================================
+
+    zombieMessage("&6&lВолна %{wave}% начинается!")
+    zombieMessage("&7Обычных зомби: &f%{_amount}%")
+    zombieMessage("&7HP обычного зомби: &c%{_zombieHP}% ❤")
+    zombieMessage("&7Всего противников: &f%{alive_zombies}%")
+
+
+# ============================================================
+#                     ОБНОВЛЕНИЕ HP
+# ============================================================
+
+every 1 second:
+
+    if {wave} is set:
+
+        loop all zombies:
+
+            if {zombie.%uuid of loop-entity%} is set:
+
+                if loop-entity is alive:
+
+                    if {zombie.finalboss.%uuid of loop-entity%} is set:
+
+                        set {_hp} to round(health of loop-entity)
+
+                        set name of loop-entity to "&4&l☠ ФИНАЛЬНЫЙ БОСС &c%{_hp}% ❤"
+
+
+                    else if {zombie.miniboss.%uuid of loop-entity%} is set:
+
+                        set {_hp} to round(health of loop-entity)
+
+                        set name of loop-entity to "&5&lМИНИ-БОСС &d%{_hp}% ❤"
+
+
+                    else if {zombie.normal.%uuid of loop-entity%} is set:
+
+                        set {_hp} to round(health of loop-entity)
+
+                        set name of loop-entity to "&7Зомби &c%{_hp}% ❤"
+
+
+# ============================================================
+#                       УРОН ЗОМБИ
+# ============================================================
+
+on damage of zombie:
+
+    if {wave} is not set:
+
+        stop
+
+
+    if {zombie.%uuid of victim%} is not set:
+
+        stop
+
+
+    if {zombie.finalboss.%uuid of victim%} is set:
+
+        wait 1 tick
+
+        if victim is alive:
+
+            set {_hp} to round(health of victim)
+
+            set name of victim to "&4&l☠ ФИНАЛЬНЫЙ БОСС &c%{_hp}% ❤"
+
+        stop
+
+
+    if {zombie.miniboss.%uuid of victim%} is set:
+
+        wait 1 tick
+
+        if victim is alive:
+
+            set {_hp} to round(health of victim)
+
+            set name of victim to "&5&lМИНИ-БОСС &d%{_hp}% ❤"
+
+        stop
+
+
+    if {zombie.normal.%uuid of victim%} is set:
+
+        wait 1 tick
+
+        if victim is alive:
+
+            set {_hp} to round(health of victim)
+
+            set name of victim to "&7Зомби &c%{_hp}% ❤"
+
+
+# ============================================================
+#                    СМЕРТЬ ИГРОКА
+# ============================================================
+
+on death of player:
+
+    if {wave} is not set:
+
+        stop
+
+
+    if {zombie.player::%uuid of victim%} is not set:
+
+        stop
+
+
+    set {zombie.dead::%uuid of victim%} to true
+
+    clear drops
+
+    send "&c☠ Ты погиб!" to victim
+    send "&7После окончания волны ты воскреснешь." to victim
+
+    checkZombiePlayersAlive()
+
+
+# ============================================================
+#                       RESPAWN
+# ============================================================
+
+on respawn:
+
+    if {zombie.dead::%uuid of player%} is set:
+
+        wait 1 tick
+
+        set gamemode of player to spectator
+
+        send "&7Ты наблюдаешь за игрой." to player
+
+
+# ============================================================
+#                  ПРОВЕРКА ИГРОКОВ
+# ============================================================
+
+function checkZombiePlayersAlive():
+
+    if {wave} is not set:
+
+        stop
+
+
+    set {_total} to zombiePlayers()
+
+    set {_alive} to aliveZombiePlayers()
+
+
+    if {_total} > 0:
+
+        if {_alive} <= 0:
+
+            zombieMessage("&c☠ Все игроки погибли!")
+            zombieMessage("&cИгра окончена!")
+
+            stopZombieGame()
+
+
+# ============================================================
+#                       ВОСКРЕШЕНИЕ
+# ============================================================
+
+function reviveZombiePlayers():
+
+    loop all players:
+
+        if {zombie.player::%uuid of loop-player%} is set:
+
+            if {zombie.dead::%uuid of loop-player%} is set:
+
+                set {_p} to loop-player
+
+
+                if size of {zombie.reviveSpawns::*} > 0:
+
+                    set {_spawn} to random element out of {zombie.reviveSpawns::*}
+
+                    teleport {_p} to {_spawn}
+
+
+                delete {zombie.dead::%uuid of {_p}%}
+
+                set gamemode of {_p} to adventure
+
+                set health of {_p} to max health of {_p}
+
+                set food level of {_p} to 20
+
+                give wooden sword to {_p}
+
+                send "&a❤ Ты воскрес!" to {_p}
+
+
+# ============================================================
+#                    СЛЕДУЮЩАЯ ВОЛНА
+# ============================================================
+
+function prepareNextWave():
+
+    if {wave} is not set:
+
+        stop
+
+
+    if {wave} >= {@max-waves}:
+
+        stop
+
+
+    delete {zombie.wavevote::*}
+
+    set {zombie.nextwave} to true
+
+
+    zombieMessage("")
+    zombieMessage("&a&lВолна %{wave}% зачищена!")
+    zombieMessage("&7Следующая волна: &e%{wave} + 1%")
+    zombieMessage("")
+
+
+    loop all players:
+
+        if {zombie.player::%uuid of loop-player%} is set:
+
+            sendNextWaveButton(loop-player)
+
+
+# ============================================================
+#                       /NEXTWAVE
+# ============================================================
+
+command /nextwave:
+
+    trigger:
+
+        if player does not have permission "LHS.menu":
+
+            if {zombie.player::%uuid of player%} is not set:
+
+                send "&c✘ Вы не участвуете в ZombieVoln!"
+
+                stop
+
+
+        if {zombie.nextwave} is not set:
+
+            send "&c✘ Сейчас нельзя начать следующую волну!"
+
+            stop
+
+
+        delete {zombie.nextwave}
+
+        delete {zombie.wavevote::*}
+
+        add 1 to {wave}
+
+
+        reviveZombiePlayers()
+
+
+        loop all players:
+
+            if {zombie.player::%uuid of loop-player%} is set:
+
+                apply regeneration 2 to loop-player for 5 seconds
+
+
+        zombieMessage("")
+        zombieMessage("&a&lНачинается волна %{wave}%!")
+        zombieMessage("")
+
+
+        wait 3 seconds
+
+
+        if {wave} is set:
+
+            spawnZombieWave()
+
+
+# ============================================================
+#                  КОМАНДА ZOMBIENEXT
+# ============================================================
+
+command /zombienext:
+
+    trigger:
+
+        if player does not have permission "LHS.menu":
+
+            if {zombie.player::%uuid of player%} is not set:
+
+                send "&c✘ Вы не участвуете в ZombieVoln!"
+
+                stop
+
+
+        if {zombie.nextwave} is not set:
+
+            send "&c✘ Сейчас нельзя начать следующую волну!"
+
+            stop
+
+
+        execute player command "nextwave"
+
+
+# ============================================================
+#                    СМЕРТЬ ЗОМБИ
+# ============================================================
+
+on death of zombie:
+
+    if {zombie.%uuid of victim%} is not set:
+
+        stop
+
+
+    # ========================================================
+    # ФИНАЛЬНЫЙ БОСС
+    # ========================================================
+
+    if {zombie.finalboss.%uuid of victim%} is set:
+
+        drop 20 paper named "1$" with lore "Может это рубль?" at location of victim
+        drop 20 paper named "1$" with lore "Может это рубль?" at location of victim
+        drop 10 gold ingot at location of victim
+        drop 5 diamond at location of victim
+        drop 3 emerald at location of victim
+        drop 1 netherite scrap at location of victim
+
+        zombieMessage("&4&lФИНАЛЬНЫЙ БОСС ПОВЕРЖЕН!")
+        zombieMessage("&6С него выпало огромное количество награды!")
+
+
+    # ========================================================
+    # МИНИ-БОСС
+    # ========================================================
+
+    else if {zombie.miniboss.%uuid of victim%} is set:
+
+        drop 10 paper named "1$" with lore "Может это рубль?" at location of victim
+        drop 5 gold ingot at location of victim
+        drop 3 diamond at location of victim
+        drop 1 emerald at location of victim
+
+        zombieMessage("&5&lМИНИ-БОСС ПОВЕРЖЕН!")
+        zombieMessage("&6С него выпала дополнительная награда!")
+
+
+    # ========================================================
+    # ОБЫЧНЫЙ ЗОМБИ
+    # ========================================================
+
+    if attacker is a player:
+
+        if {zombie.finalboss.%uuid of victim%} is not set:
+
+            if {zombie.miniboss.%uuid of victim%} is not set:
+
+                if chance of 50%:
+
+                    set {_amount} to random integer between 1 and 3
+
+                    loop {_amount} times:
+
+                        drop paper named "1$" with lore "Может это рубль?" at location of victim
+
+
+    delete {zombie.%uuid of victim%}
+
+    delete {zombie.normal.%uuid of victim%}
+
+    delete {zombie.miniboss.%uuid of victim%}
+
+    delete {zombie.finalboss.%uuid of victim%}
+
+
+    if {alive_zombies} is set:
+
+        remove 1 from {alive_zombies}
+
+
+    if {alive_zombies} < 0:
+
+        set {alive_zombies} to 0
+
+
+    # ========================================================
+    # ВОЛНА ЗАВЕРШЕНА
+    # ========================================================
+
+    if {alive_zombies} <= 0:
+
+        # ====================================================
+        # ФИНАЛЬНАЯ ПОБЕДА
+        # ====================================================
+
+        if {wave} = {@max-waves}:
+
+            zombieMessage("")
+            zombieMessage("&4&l════════════════════════════")
+            zombieMessage("&a&lПОБЕДА!")
+            zombieMessage("&aВсе &e100 &aволн были пройдены!")
+            zombieMessage("&4&l════════════════════════════")
+            zombieMessage("")
+
+
+            reviveZombiePlayers()
+
+            wait 3 seconds
+
+            stopZombieGame()
+
+            stop
+
+
+        # ====================================================
+        # ОБЫЧНАЯ ЗАЧИСТКА
+        # ====================================================
+
+        prepareNextWave()
+
+
+# ============================================================
+#                    ОСТАНОВКА ИГРЫ
+# ============================================================
+
+function stopZombieGame():
+
+    if {wave} is not set:
+
+        stop
+
+
+    zombieMessage("&cЗомби-апокалипсис остановлен!")
+
+
+    # ========================================================
+    # УБИВАЕМ ЗОМБИ
+    # ========================================================
+
+    loop all zombies:
+
+        if {zombie.%uuid of loop-entity%} is set:
+
+            delete {zombie.%uuid of loop-entity%}
+
+            delete {zombie.normal.%uuid of loop-entity%}
+
+            delete {zombie.miniboss.%uuid of loop-entity%}
+
+            delete {zombie.finalboss.%uuid of loop-entity%}
+
+            kill loop-entity
+
+
+    set {_return} to returnLocation()
+
+
+    # ========================================================
+    # ВОЗВРАЩАЕМ ИГРОКОВ
+    # ========================================================
+
+    loop all players:
+
+        if {zombie.player::%uuid of loop-player%} is set:
+
+            teleport loop-player to {_return}
+
+            set gamemode of loop-player to adventure
+
+            set health of loop-player to max health of loop-player
+
+            set food level of loop-player to 20
+
+            send "&eИгра окончена. Вы возвращены на старт." to loop-player
+
+
+            delete {zombie.player::%uuid of loop-player%}
+
+            delete {zombie.dead::%uuid of loop-player%}
+
+
+    delete {wave}
+
+    delete {alive_zombies}
+
+    delete {zombie.countdown}
+
+    delete {zombie.nextwave}
+
+    delete {zombie.wavevote::*}
+
+    delete {zombie.ready::*}
+
+    delete {zombie.waveInput::*}
+
+
+# ============================================================
+#                           МИНА
+# ============================================================
+
+on step on oak pressure plate:
+
+    if player has permission "special.mine":
+
+        apply blindness to player for 3 seconds
+
+        send "&cВы были ослеплены миной!" to player
+
+        wait 1 tick
+
+        set block at event-block to air
+
+
+# ============================================================
+#                ЗАМЕДЛЕНИЕ ПРИ НИЗКОМ HP
+# ============================================================
+
+every 1 second:
+
+    loop all players:
+
+        if loop-player does not have permission "admin.use":
+
+            if health of loop-player <= 5:
+
+                if loop-player does not have potion effect slowness:
+
+                    apply slowness 1 to loop-player for 3 seconds
+
+
+# ============================================================
+#                   ТРАВА / НЕВИДИМОСТЬ
+# ============================================================
+
+every 1 second:
+
+    loop all players:
+
+        set {_b1} to block at location of loop-player
+
+        set {_b2} to block above {_b1}
+
+
+        if {_b1} is tall grass:
+
+            add 1 to {grass.hide.%uuid of loop-player%}
+
+
+            if {grass.hide.%uuid of loop-player%} >= 5:
+
+                make loop-player invisible
+
+
+        else if {_b2} is tall grass:
+
+            add 1 to {grass.hide.%uuid of loop-player%}
+
+
+            if {grass.hide.%uuid of loop-player%} >= 5:
+
+                make loop-player invisible
+
+
+        else:
+
+            delete {grass.hide.%uuid of loop-player%}
+
+            make loop-player visible
+
+
+# ============================================================
+#                           PVP
+# ============================================================
+
+on damage:
+
+    attacker is a player
+
+    victim is a player
+
+
+    if attacker has permission "{@pvp-permission}":
+
+        if victim has permission "{@pvp-permission}":
+
+            cancel event
+
+            send "&cВы не можете атаковать игроков своей группы!" to attacker
+
+
+# ============================================================
+#                        AIR HIT
+# ============================================================
+
+on left click:
+
+    if player has permission "slow.airhit":
+
+        if player's tool is iron sword:
+
+            if clicked entity is not set:
+
+                apply slowness 1 to player for 5 seconds
+
+
+# ============================================================
+#                  ОГРАНИЧЕНИЕ ИНВЕНТАРЯ
+# ============================================================
+
+every 60 ticks:
+
+    loop all players:
+
+        if loop-player has permission "{@inventory-permission}":
+
+            if loop-player is op:
+
+                stop
+
+
+            if gamemode of loop-player is not creative:
+
+                loop numbers from 5 to 35:
+
+                    if slot loop-number of loop-player is air:
+
+                        set slot loop-number of loop-player to barrier named "&cСлот заблокирован"
+
+
+                clear slot 40 of loop-player
+
+
+# ============================================================
+#                КЛИКИ ЗАБЛОКИРОВАННЫХ СЛОТОВ
+# ============================================================
+
+on inventory click:
+
+    if player has permission "{@inventory-permission}":
+
+        if player is op:
+
+            stop
+
+
+        if gamemode of player is creative:
+
+            stop
+
+
+        if clicked slot is 40:
+
+            cancel event
+
+            stop
+
+
+        if clicked slot >= 5:
+
+            if clicked slot <= 35:
+
+                cancel event
+
+                stop
+
+
+# ============================================================
+#                    DRAG ИНВЕНТАРЯ
+# ============================================================
+
+on inventory drag:
+
+    if player has permission "{@inventory-permission}":
+
+        if player is op:
+
+            stop
+
+
+        if gamemode of player is creative:
+
+            stop
+
+
+        loop event-slots:
+
+            if loop-value is 40:
+
+                cancel event
+
+                stop
+
+
+            if loop-value >= 5:
+
+                if loop-value <= 35:
+
+                    cancel event
+
+                    stop
+
+
+# ============================================================
+#                    SWAP HAND
+# ============================================================
+
+on swap hand items:
+
+    if player has permission "{@inventory-permission}":
+
+        if player is op:
+
+            stop
+
+
+        if gamemode of player is not creative:
+
+            cancel event
+
+
+# ============================================================
+#                         DROP
+# ============================================================
+
+on drop:
+
+    if player is op:
+
+        stop
+
+
+    if player has permission "{@inventory-permission}":
+
+        if gamemode of player is not creative:
+
+            if event-item is barrier:
+
+                cancel event
+
+
+# ============================================================
+#             ЗАПРЕТ ПОДБОРА БАРЬЕРОВ ДЛЯ OP
+# ============================================================
+
+on pickup:
+
+    if player is op:
+
+        if event-item is barrier:
+
+            cancel event
+
+
+# ============================================================
+#                       ГЕНЕРАТОРЫ
+# ============================================================
+
+command /setgenerator:
+
+    permission: Dev
+    permission message: &cУ вас нет прав.
+
+    trigger:
+
+        if {gen.count} is not set:
+
+            set {gen.count} to 0
+
+
+        if {gen.count} >= 6:
+
+            send "&cМаксимум 6 генераторов уже установлено!"
+
+            stop
+
+
+        set {_loc} to location of block below player
+
+        add 1 to {gen.count}
+
+
+        set {gen.%{gen.count}%} to {_loc}
+
+        set {gen.health.%{gen.count}%} to 0
+
+        set {gen.repaired.%{gen.count}%} to false
+
+
+        delete {gen.players.%{gen.count}%::*}
+
+
+        play sound "block.beacon.activate" to player
+
+        send "&aГенератор #%{gen.count}% установлен!"
+
+
+# ============================================================
+#                    УДАЛЕНИЕ ГЕНЕРАТОРА
+# ============================================================
+
+command /removegenerator:
+
+    permission: Dev
+    permission message: &cУ вас нет прав.
+
+    trigger:
+
+        loop numbers from 1 to 6:
+
+            if {gen.%loop-number%} is location of block below player:
+
+                delete {gen.%loop-number%}
+
+                delete {gen.health.%loop-number%}
+
+                delete {gen.repaired.%loop-number%}
+
+                delete {gen.players.%loop-number%::*}
+
+
+                subtract 1 from {gen.count}
+
+
+                play sound "block.redstone_torch.burnout" to player
+
+                send "&aГенератор удалён!"
+
+                stop
+
+
+# ============================================================
+#                 ПОЧИНКА ГЕНЕРАТОРА
+# ============================================================
+
+on block damage:
+
+    loop numbers from 1 to 6:
+
+        if {gen.%loop-number%} is location of event-block:
+
+            cancel event
+
+
+            if {gen.repaired.%loop-number%} is true:
+
+                stop
+
+
+            if size of {gen.players.%loop-number%::*} >= 4:
+
+                send "&cМаксимум 4 игрока чинят этот генератор!"
+
+                stop
+
+
+            if player is in {gen.players.%loop-number%::*}:
+
+                stop
+
+
+            add player to {gen.players.%loop-number%::*}
+
+
+            if {gen.health.%loop-number%} is not set:
+
+                set {gen.health.%loop-number%} to 0
+
+
+            # =================================================
+            # МИНИ-ИГРА
+            # =================================================
+
+            if random integer between 1 and 100 <= 25:
+
+                set {_colors::*} to "red"
+
+                add "blue" to {_colors::*}
+                add "green" to {_colors::*}
+                add "yellow" to {_colors::*}
+                add "black" to {_colors::*}
+                add "white" to {_colors::*}
+
+
+                set {_color} to random element out of {_colors::*}
+
+                set {gen.minigame.%uuid of player%} to {_color}
+
+
+                set {_inv} to chest inventory with 1 row named "&6Мини-игра"
+
+
+                set slot 0 of {_inv} to red wool named "&cКрасный"
+                set slot 1 of {_inv} to blue wool named "&9Синий"
+                set slot 2 of {_inv} to green wool named "&aЗелёный"
+                set slot 3 of {_inv} to yellow wool named "&eЖёлтый"
+                set slot 4 of {_inv} to black wool named "&0Чёрный"
+                set slot 5 of {_inv} to white wool named "&fБелый"
+
+
+                open {_inv} to player
+
+
+                wait 3 seconds
+
+
+                if {gen.minigame.%uuid of player%} is set:
+
+                    delete {gen.minigame.%uuid of player%}
+
+                    remove 1 from {gen.health.%loop-number%}
+
+
+                    if {gen.health.%loop-number%} < 0:
+
+                        set {gen.health.%loop-number%} to 0
+
+
+                    send "&cНе успел! -1 прогресс" to player
+
+                    stop
+
+
+            # =================================================
+            # ПРОГРЕСС
+            # =================================================
+
+            if name of player's tool contains "Инструменты":
+
+                add 2 to {gen.health.%loop-number%}
+
+            else:
+
+                add 1 to {gen.health.%loop-number%}
+
+
+            if {gen.health.%loop-number%} > 10:
+
+                set {gen.health.%loop-number%} to 10
+
+
+            play sound "block.piston.extend" to player
+
+
+            send "&eГенератор #%loop-number%: &f%{gen.health.%loop-number%}%/10" to player
+
+
+            if {gen.health.%loop-number%} >= 10:
+
+                set {gen.health.%loop-number%} to 10
+
+                set {gen.repaired.%loop-number%} to true
+
+
+                play sound "entity.player.levelup" to player
+
+
+                loop all players:
+
+                    if loop-player has permission "LHS.menu":
+
+                        send "&aГЕНЕРАТОР #%loop-number% ПОЧИНЕН!" to loop-player
+
+
+# ============================================================
+#                 МИНИ-ИГРА ГЕНЕРАТОРА
+# ============================================================
+
+on inventory click:
+
+    if name of event-inventory is "&6Мини-игра":
+
+        cancel event
+
+
+        if {gen.minigame.%uuid of player%} is not set:
+
+            close player's inventory
+
+            stop
+
+
+        set {_need} to {gen.minigame.%uuid of player%}
+
+
+        if event-item is red wool:
+
+            set {_pick} to "red"
+
+
+        else if event-item is blue wool:
+
+            set {_pick} to "blue"
+
+
+        else if event-item is green wool:
+
+            set {_pick} to "green"
+
+
+        else if event-item is yellow wool:
+
+            set {_pick} to "yellow"
+
+
+        else if event-item is black wool:
+
+            set {_pick} to "black"
+
+
+        else if event-item is white wool:
+
+            set {_pick} to "white"
+
+
+        else:
+
+            stop
+
+
+        close player's inventory
+
+        delete {gen.minigame.%uuid of player%}
+
+
+        loop numbers from 1 to 6:
+
+            if {gen.%loop-number%} is location of block below player:
+
+                if {_pick} is {_need}:
+
+                    if name of player's tool contains "Инструменты":
+
+                        add 2 to {gen.health.%loop-number%}
+
+                    else:
+
+                        add 1 to {gen.health.%loop-number%}
+
+
+                    send "&aВерно!" to player
+
+
+                else:
+
+                    remove 1 from {gen.health.%loop-number%}
+
+
+                    if {gen.health.%loop-number%} < 0:
+
+                        set {gen.health.%loop-number%} to 0
+
+
+                    send "&cОшибка!" to player
+
+
+# ============================================================
+#                 КОЛИЧЕСТВО ГЕНЕРАТОРОВ
+# ============================================================
+
+function repairedGenCount() :: number:
+
+    set {_c} to 0
+
+
+    loop numbers from 1 to 6:
+
+        if {gen.repaired.%loop-number%} is true:
+
+            add 1 to {_c}
+
+
+    return {_c}
+
+
+# ============================================================
+#                         ДВЕРЬ
+# ============================================================
+
+on right click on iron door:
+
+    if block below event-block is not green terracotta:
+
+        stop
+
+
+    set {_base} to block below event-block
+
+
+    if repairedGenCount() < 5:
+
+        send action bar "&cНужно 5 из 6 генераторов!" to player
+
+        stop
+
+
+    if name of player's tool is not "Keycard A":
+
+        send action bar "&cНужен ключ!" to player
+
+        stop
+
+
+    set block at {_base} to air
+
+    set block above {_base} to air
+
+
+    send "&aДВЕРЬ ОТКРЫТА!" to player
+
+
+# ============================================================
+#                      БАРРИКАДЫ
+# ============================================================
+
+command /sysbarricade [<text>] [<text>]:
+
+    permission: op
+    permission message: &7[&c&l!&7] &4У Вас нет прав для использования этой команды!
+
+    trigger:
+
+
+        if arg-1 is "list":
+
+            send "&7[&c&l!&7] &eСписок баррикад:" to sender
+            send "&b%{barricade.list::*}%" to sender
+
+            stop
+
+
+        if arg-1 is "add":
+
+            if targeted block is not oak slab:
+
+                send "&7[&c&l!&7] &4Это не полублок дуба!" to sender
+
+                stop
+
+
+            if arg-2 is not set:
+
+                send "&cУкажите имя баррикады!" to sender
+
+                stop
+
+
+            if {barricade.list::*} does not contain arg-2:
+
+                add arg-2 to {barricade.list::*}
+
+                add location of targeted block to {barricade.%arg-2%::*}
+
+                set {barricade.durability.%arg-2%} to 3
+
+                send "&7[&c&l!&7] &aБаррикада &e%arg-2% &aсоздана!" to sender
+
+            else:
+
+                add location of targeted block to {barricade.%arg-2%::*}
+
+                send "&7[&c&l!&7] &aБлок добавлен к баррикаде &e%arg-2%&a!" to sender
+
+            stop
+
+
+        if arg-1 is "rem":
+
+            if arg-2 is not set:
+
+                send "&cУкажите имя баррикады!" to sender
+
+                stop
+
+
+            if {barricade.list::*} does not contain arg-2:
+
+                send "&7[&c&l!&7] &4Такой баррикады нет!" to sender
+
+                stop
+
+
+            delete {barricade.%arg-2%::*}
+
+            remove arg-2 from {barricade.list::*}
+
+            delete {barricade.durability.%arg-2%}
+
+
+            send "&7[&c&l!&7] &aБаррикада &e%arg-2% &cудалена!" to sender
+
+            stop
+
+
+        if arg-1 is "repair":
+
+            if arg-2 is not set:
+
+                send "&cУкажите имя баррикады!" to sender
+
+                stop
+
+
+            if {barricade.list::*} does not contain arg-2:
+
+                send "&7[&c&l!&7] &4Такой баррикады нет!" to sender
+
+                stop
+
+
+            set {barricade.durability.%arg-2%} to 3
+
+
+            loop {barricade.%arg-2%::*}:
+
+                set block at loop-value to oak slab
+
+
+            send "&7[&c&l!&7] &aБаррикада &e%arg-2% &aвосстановлена!" to sender
+
+            stop
+
+
+        send "&e/sysbarricade list"
+        send "&e/sysbarricade add <имя>"
+        send "&e/sysbarricade rem <имя>"
+        send "&e/sysbarricade repair <имя>"
+
+
+# ============================================================
+#                    ЛОМАНИЕ БАРРИКАД
+# ============================================================
+
+on player move:
+
+    loop {barricade.list::*}:
+
+        set {_name} to loop-value
+
+
+        if {barricade.cooldown.%{_name}%} is not set:
+
+            loop {barricade.%{_name}%::*}:
+
+                set {_barLoc} to loop-value
+
+
+                if distance between location of player and {_barLoc} <= 2:
+
+                    set {barricade.cooldown.%{_name}%} to true
+
+
+                    if {barricade.durability.%{_name}%} is smaller than or equal to 0:
+
+                        loop {barricade.%{_name}%::*}:
+
+                            set block at loop-value-2 to air
+
+
+                        delete {barricade.durability.%{_name}%}
+
+                        delete {barricade.cooldown.%{_name}%}
+
+                        stop
+
+
+                    remove 1 from {barricade.durability.%{_name}%}
+
+
+                    wait 1 second
+
+
+                    delete {barricade.cooldown.%{_name}%}
+
+                    stop
+
+
+# ============================================================
+#                  ПАУТИНА В ADVENTURE
+# ============================================================
+
+on right click:
+
+    if player's tool is cobweb:
+
+        if gamemode of player is adventure:
+
+            if clicked block is not air:
+
+                set {_loc} to location of block above clicked block
+
+
+                if block at {_loc} is air:
+
+                    set block at {_loc} to cobweb
+
+                    remove 1 cobweb from player's tool
+
+                    send "&aТы поставил колючую проволоку!" to player
+
+
+                    wait 60 seconds
+
+
+                    if block at {_loc} is cobweb:
+
+                        set block at {_loc} to air
+
+                        send "&cКолючая проволока исчезла!" to player
+
+            else:
+
+                send "&cНужно кликнуть по блоку!" to player
