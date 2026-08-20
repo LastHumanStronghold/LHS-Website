@@ -1,0 +1,18 @@
+name: HideNametag
+version: 1.0.0
+main: ru.hidenametag.HideNametagPlugin
+api-version: '1.21'
+author: LastHumanStronghold
+description: Скрывает никнеймы игроков над головой
+
+commands:
+  hidenametag:
+    description: Включить или выключить скрытие никнеймов
+    usage: /hidenametag <on|off|status>
+    permission: hidenametag.admin
+    permission-message: У вас нет прав на использование этой команды.
+
+permissions:
+  hidenametag.admin:
+    description: Доступ к команде управления плагином
+    default: op
