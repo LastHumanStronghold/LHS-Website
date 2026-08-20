@@ -1,0 +1,28 @@
+name: Build HideNametag
+
+on:
+  push:
+    branches:
+      - build-hide-nametag
+  workflow_dispatch:
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+      - name: Set up Java 21
+        uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '21'
+          cache: maven
+      - name: Build plugin
+        working-directory: HideNametag
+        run: mvn -B clean package
+      - name: Upload JAR
+        uses: actions/upload-artifact@v4
+        with:
+          name: HideNametag-1.0.0
+          path: HideNametag/target/HideNametag-1.0.0.jar
