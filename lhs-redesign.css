@@ -1,13 +1,41 @@
-/* LHS top animated module — only on the main hero */
-body{background:#030405!important}
-body:before{content:""!important;position:fixed;inset:0;z-index:-5!important;background:radial-gradient(ellipse at 50% 0%,rgba(255,104,0,.075),transparent 38%),linear-gradient(145deg,#070807,#020303 58%,#090604)!important;pointer-events:none}
-body:after{content:""!important;position:fixed;inset:0;z-index:-4!important;background:linear-gradient(115deg,transparent 0 43%,rgba(255,126,28,.018) 50%,transparent 57%)!important;animation:lhsSweep 28s ease-in-out infinite alternate!important;pointer-events:none}
-/* Never show the decorative module on inner pages */
+/* LHS visual redesign — сохраняет текущую концепцию, но делает интерфейс более цельным */
+body{background:#050505!important}
+body:before{content:""!important;position:fixed;inset:0;z-index:-5!important;background:radial-gradient(ellipse at 50% -10%,rgba(255,105,20,.11),transparent 40%),radial-gradient(circle at 8% 70%,rgba(255,138,31,.035),transparent 25%),linear-gradient(145deg,#090807,#030303 58%,#090604)!important;pointer-events:none}
+body:after{content:""!important;position:fixed;inset:0;z-index:-4!important;background:linear-gradient(110deg,transparent 0 38%,rgba(255,126,28,.018) 50%,transparent 62%);animation:lhsSweep 24s ease-in-out infinite alternate!important;pointer-events:none}
 .ambient{display:none!important}
-.hero{overflow:hidden!important}
-.hero:before{display:block!important;content:""!important;position:absolute!important;width:460px!important;height:460px!important;left:50%!important;top:-125px!important;transform:translateX(-50%) rotate(0deg)!important;border:1px dashed rgba(255,138,31,.13)!important;border-radius:50%!important;background:radial-gradient(circle,rgba(255,100,0,.035),transparent 66%)!important;box-shadow:0 0 70px rgba(255,90,0,.025),inset 0 0 45px rgba(255,90,0,.018)!important;animation:lhsOrbitTop 24s linear infinite!important;will-change:transform;pointer-events:none!important}
-.hero:after{left:15%!important;right:15%!important;bottom:9%!important;background:linear-gradient(90deg,transparent,rgba(255,138,31,.2),transparent)!important}
-.hero-inner{position:relative;z-index:2}.hero-inner:before{content:"";position:absolute;width:92px;height:92px;left:50%;top:-94px;transform:translateX(-50%);border:1px solid rgba(255,138,31,.22);border-radius:50%;background:radial-gradient(circle,rgba(255,138,31,.08),transparent 65%);box-shadow:0 0 35px rgba(255,100,0,.08);animation:lhsCore 6s ease-in-out infinite;pointer-events:none}.hero-inner:after{content:"LHS / ACTIVE"!important;position:absolute!important;left:50%!important;top:-52px!important;width:auto!important;height:auto!important;background:none!important;box-shadow:none!important;transform:translateX(-50%)!important;color:rgba(255,138,31,.48)!important;font:600 7px/1 ui-monospace,SFMono-Regular,Consolas,monospace!important;letter-spacing:2.5px!important;animation:lhsFlicker 3s ease-in-out infinite!important}
-@keyframes lhsSweep{from{transform:translateX(-2%)}to{transform:translateX(2%)}}@keyframes lhsOrbitTop{from{transform:translateX(-50%) rotate(0deg)}to{transform:translateX(-50%) rotate(360deg)}}@keyframes lhsCore{0%,100%{transform:translateX(-50%) scale(.94);opacity:.65}50%{transform:translateX(-50%) scale(1.06);opacity:1}}@keyframes lhsFlicker{0%,100%{opacity:.28}45%{opacity:.52}50%{opacity:.38}55%{opacity:.5}}
-@media(max-width:700px){.hero:before{width:310px!important;height:310px!important;top:-75px!important}.hero-inner:before{top:-70px;width:72px;height:72px}.hero-inner:after{top:-39px!important;font-size:6px!important}}
+header{box-shadow:0 8px 35px rgba(0,0,0,.22);border-bottom-color:rgba(255,138,31,.16)!important}
+.logo-mark{box-shadow:0 0 24px rgba(255,138,31,.05);transition:transform .25s ease,box-shadow .25s ease}
+.logo:hover .logo-mark{transform:translateY(-1px) rotate(-2deg);box-shadow:0 0 30px rgba(255,138,31,.14)}
+nav a{transition:color .22s ease,background .22s ease,transform .22s ease!important}
+nav a:hover{transform:translateY(-1px)}
+.hero{min-height:calc(100vh - 66px);padding-top:105px!important}
+.hero:before{display:block!important;content:""!important;position:absolute!important;width:min(590px,82vw)!important;height:min(590px,82vw)!important;left:50%!important;top:-150px!important;transform:translateX(-50%) rotate(0deg)!important;border:1px dashed rgba(255,138,31,.14)!important;border-radius:50%!important;background:radial-gradient(circle,rgba(255,100,0,.05),transparent 66%)!important;box-shadow:0 0 90px rgba(255,90,0,.035),inset 0 0 55px rgba(255,90,0,.025)!important;animation:lhsOrbitTop 30s linear infinite!important;will-change:transform;pointer-events:none!important}
+.hero:after{left:10%!important;right:10%!important;bottom:7%!important;background:linear-gradient(90deg,transparent,rgba(255,138,31,.24),transparent)!important}
+.hero-inner{position:relative;z-index:2;filter:drop-shadow(0 20px 40px rgba(0,0,0,.18))}
+.hero-inner:before{content:"";position:absolute;width:108px;height:108px;left:50%;top:-110px;transform:translateX(-50%);border:1px solid rgba(255,138,31,.25);border-radius:50%;background:radial-gradient(circle,rgba(255,138,31,.11),transparent 66%);box-shadow:0 0 45px rgba(255,100,0,.1);animation:lhsCore 5s ease-in-out infinite;pointer-events:none}
+.hero-inner:after{content:"LHS / ACTIVE"!important;position:absolute!important;left:50%!important;top:-62px!important;width:auto!important;height:auto!important;background:none!important;box-shadow:none!important;transform:translateX(-50%)!important;color:rgba(255,138,31,.55)!important;font:600 7px/1 ui-monospace,SFMono-Regular,Consolas,monospace!important;letter-spacing:3px!important;animation:lhsFlicker 3s ease-in-out infinite!important}
+.eyebrow{box-shadow:0 0 25px rgba(255,138,31,.035);backdrop-filter:blur(8px)}
+.hero h1{font-size:clamp(92px,15vw,190px)!important;text-shadow:0 25px 70px rgba(0,0,0,.35)}
+.lead{max-width:760px!important;color:#a39a92!important}
+.container,.wrap{position:relative}
+.section-head h2{font-weight:850}
+.cards{gap:17px}
+.card,.role,.news-card{background:linear-gradient(145deg,rgba(255,255,255,.035),rgba(255,255,255,.014))!important;box-shadow:0 14px 45px rgba(0,0,0,.16)!important}
+.card:after,.role:after,.news-card:after{content:"";position:absolute;inset:0;border-radius:inherit;pointer-events:none;background:linear-gradient(120deg,rgba(255,255,255,.025),transparent 35%,transparent 70%,rgba(255,138,31,.018));opacity:.8}
+.card:hover,.role:hover,.news-card:hover{transform:translateY(-6px)!important;border-color:rgba(255,138,31,.32)!important;box-shadow:0 22px 55px rgba(0,0,0,.3),0 0 30px rgba(255,138,31,.035)!important}
+.icon{background:rgba(255,138,31,.035)!important;box-shadow:inset 0 0 18px rgba(255,138,31,.025)}
+.tree{gap:15px}
+.tree>.role{border-radius:15px}
+.role-level{display:grid;grid-template-columns:1fr 1fr 1fr;gap:15px;position:relative}
+.role-level:before{content:"";position:absolute;left:12%;right:12%;top:-8px;height:1px;background:linear-gradient(90deg,transparent,rgba(255,138,31,.18),transparent)}
+.role-level .role{min-width:0}
+.group h2{box-shadow:0 10px 30px rgba(0,0,0,.12)}
+.server-status-inner{backdrop-filter:blur(10px);box-shadow:0 8px 30px rgba(0,0,0,.14)}
+.footer{background:linear-gradient(180deg,transparent,rgba(255,138,31,.012))}
+@keyframes lhsSweep{from{transform:translateX(-2%)}to{transform:translateX(2%)}}
+@keyframes lhsOrbitTop{from{transform:translateX(-50%) rotate(0deg)}to{transform:translateX(-50%) rotate(360deg)}}
+@keyframes lhsCore{0%,100%{transform:translateX(-50%) scale(.94);opacity:.62}50%{transform:translateX(-50%) scale(1.08);opacity:1}}
+@keyframes lhsFlicker{0%,100%{opacity:.25}45%{opacity:.58}50%{opacity:.34}55%{opacity:.52}}
+@media(max-width:850px){.role-level{grid-template-columns:1fr 1fr}}
+@media(max-width:620px){.hero{padding-top:78px!important}.hero:before{width:330px!important;height:330px!important;top:-80px!important}.hero-inner:before{top:-76px;width:76px;height:76px}.hero-inner:after{top:-43px!important;font-size:6px!important}.role-level{grid-template-columns:1fr}}
 @media(prefers-reduced-motion:reduce){body:after,.hero:before,.hero-inner:before,.hero-inner:after{animation:none!important}}
