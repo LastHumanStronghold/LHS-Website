@@ -1,5 +1,5 @@
 (() => {
-  const API = 'https://api.mcsrvstat.us/3/144.31.136.75:25566';
+  const API = 'https://api.mcsrvstat.us/3/2.26.229.192:25566';
   const status = document.getElementById('server-status');
   if (!status) return;
   const style = document.createElement('style');
